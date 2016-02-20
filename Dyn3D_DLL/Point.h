@@ -37,13 +37,13 @@ public:
 	/*
 	Gets the length of this Point.*/
 	double magnituid() {
-		return std::sqrt(x() * y() * z());
+		return std::sqrt((x() * x()) + (y() * y()) + (z() * z()) + (I() * I()));
 	}
 	/*
 	Returns a Point which points in the same direction as this one with a
 	magnituid of 1.*/
-	Point& unit() {
-		return operator/(magnituid());
+	Point unit() {
+		return (Point)operator/(magnituid());
 	}
 	/*
 	Returns the dot product of the two passed Points.*/

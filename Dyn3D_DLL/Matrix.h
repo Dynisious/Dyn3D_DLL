@@ -16,12 +16,13 @@ template<typename Type, Dimension_t Rows, Dimension_t Columns>
 class Matrix {
 public:
 	static const bool Type_ptr = std::_Is_pointer<Type>::value,
-		Type_dest = !std::_Is_member_object_pointer<Type>::value && !std::is_member_function_pointer<Type>::value;
+		Type_dest = !std::_Is_member_object_pointer<Type>::value && !std::is_member_function_pointer<Type>::value,
+		Type_Is_Arithmatic = std::is_arithmetic<Type>::value;
 	static const Index_t Length = Rows * Columns;
 	static const Dimension_t Rows = Rows, Columns = Columns;
-	
+
 	Matrix() {
-		if (Type_ptr)
+		if (Type_ptr || Type_Is_Arithmatic)
 			for each (Type& e in values)
 				e = NULL;
 	}
@@ -38,7 +39,7 @@ public:
 	Calls the destructor of all elements in this Matrix or deletes the objects
 	pointed to if the elements are object pointers.*/
 	inline void clear() {
-		Destruct<Type, Length, Type_ptr, Type_dest>::_call(values);
+		Destruct<Type_ptr, Type_Is_Arithmatic, Type_dest>::_Call(values);
 	}
 	/*
 	Convertes the (row, column) position to the corresponding index inside this Matrix.*/
@@ -157,7 +158,7 @@ public:
 	}
 	template<typename _T>
 	inline explicit operator _T() {
-		return dynamic_cast< _T& >(*this);
+		return *(_T*)this;
 	}
 protected:
 	Type values[Length];
@@ -165,32 +166,36 @@ protected:
 	inline virtual Matrix copy() {
 		return Matrix(*this);
 	}
-};
-
-template<typename Type, Index_t Length, bool Is_Pointer, bool Destroy>
-struct Destruct {
-	static inline void _Call() = 0;
-};
-
-template<typename Type, Index_t Length>
-struct Destruct<Type, Length, true, true> {
-	static inline void _Call(Type(&val)[Length]) {
-		for each (Type& e in val)
-			delete e;
-	}
-};
-
-template<typename Type, Index_t Length>
-struct Destruct<Type, Length, false, true> {
-	static inline void _Call(Type(&val)[Length]) {
-		for each (Type& e in val)
-			e.~Type();
-	}
-};
-
-template<typename Type, Index_t Length, bool Is_Pointer>
-struct Destruct<Type, Length, Is_Pointer, false> {
-	static inline void _Call(Type(&val)[Length]) {}
+private:
+	template<bool Is_Pointer, bool Is_Arithmatic, bool Destroy>
+	struct Destruct {
+		static inline void _Call() = 0;
+	};
+	template<>
+	struct Destruct<true, false, true> {
+		static inline void _Call(Type(&val)[Length]) {
+			for each (Type& e in val)
+				delete e;
+		}
+	};
+	template<>
+	struct Destruct<false, false, true> {
+		static inline void _Call(Type(&val)[Length]) {
+			for each (Type& e in val)
+				e.~Type();
+		}
+	};
+	template<>
+	struct Destruct<false, true, true> {
+		static inline void _Call(Type(&val)[Length]) {
+			for each (Type& e in val)
+				e = 0;
+		}
+	};
+	template<bool Is_Pointer, bool Is_Arithmatic>
+	struct Destruct<Is_Pointer, Is_Arithmatic, false> {
+		static inline void _Call(Type(&val)[Length]) {}
+	};
 };
 
 #endif
